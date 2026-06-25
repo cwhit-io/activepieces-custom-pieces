@@ -1,0 +1,58 @@
+{
+  "input": {
+    "personId": "12345",
+    "includeEmails": true,
+    "includePhoneNumbers": true
+  },
+  "output": {
+    "id": "12345",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "name": "Jane Doe",
+    "emailAddresses": [
+      {
+        "id": "67890",
+        "address": "jane@examplechurch.org",
+        "primary": true
+      }
+    ],
+    "phoneNumbers": [
+      {
+        "id": "11111",
+        "number": "+15551234567",
+        "primary": true,
+        "location": "Mobile"
+      }
+    ],
+    "raw": {
+      "data": {
+        "type": "Person",
+        "id": "12345",
+        "attributes": {
+          "first_name": "Jane",
+          "last_name": "Doe",
+          "name": "Jane Doe"
+        }
+      },
+      "included": [
+        {
+          "type": "EmailAddress",
+          "id": "67890",
+          "attributes": {
+            "address": "jane@examplechurch.org",
+            "primary": true
+          }
+        },
+        {
+          "type": "PhoneNumber",
+          "id": "11111",
+          "attributes": {
+            "number": "+15551234567",
+            "primary": true,
+            "location": "Mobile"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "activepieces-custom-pieces",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo for self-hosted Activepieces custom Pieces (church, media, and IT integrations)",
+  "workspaces": [
+    "pieces/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:planning-center": "npm run build -w @activepieces-custom/piece-planning-center",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

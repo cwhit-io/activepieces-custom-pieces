@@ -1,0 +1,26 @@
+{
+  "input": {
+    "startsAfter": "2026-06-01T00:00:00Z",
+    "startsBefore": "2026-07-01T00:00:00Z",
+    "per_page": 25
+  },
+  "output": [
+    {
+      "id": "24680",
+      "name": "Volunteer Training",
+      "startsAt": "2026-06-15T18:30:00Z",
+      "endsAt": "2026-06-15T20:00:00Z",
+      "location": "Main Campus - Room 201",
+      "raw": {
+        "type": "Event",
+        "id": "24680",
+        "attributes": {
+          "name": "Volunteer Training",
+          "starts_at": "2026-06-15T18:30:00Z",
+          "ends_at": "2026-06-15T20:00:00Z",
+          "location": "Main Campus - Room 201"
+        }
+      }
+    }
+  ]
+}

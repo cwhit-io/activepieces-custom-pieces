@@ -1,0 +1,26 @@
+{
+  "input": {
+    "serviceTypeId": "98765",
+    "filter": "future",
+    "per_page": 10
+  },
+  "output": [
+    {
+      "id": "54321",
+      "title": "Sunday Morning Worship",
+      "dates": "June 29, 2026",
+      "sortDate": "2026-06-29",
+      "status": "confirmed",
+      "raw": {
+        "type": "Plan",
+        "id": "54321",
+        "attributes": {
+          "title": "Sunday Morning Worship",
+          "dates": "June 29, 2026",
+          "sort_date": "2026-06-29",
+          "status": "confirmed"
+        }
+      }
+    }
+  ]
+}
