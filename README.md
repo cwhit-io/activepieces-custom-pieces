@@ -1,85 +1,46 @@
-# activepieces-custom-pieces
+# Activepieces Custom Pieces
 
-A reusable monorepo for **self-hosted Activepieces custom Pieces** — church, media, and IT integrations.
+A monorepo of custom **Activepieces** integrations — church, media, and IT tools for self-hosted deployments.
 
-## Purpose
-
-This repository collects custom [Activepieces](https://www.activepieces.com/) Pieces maintained outside the upstream community catalog. Pieces here target self-hosted deployments where you need integrations for tools common in church production and IT workflows.
-
-## Current Pieces
+## Pieces
 
 | Piece | Package | Description |
 |-------|---------|-------------|
-| [Planning Center](pieces/planning-center/) | `@activepieces-custom/piece-planning-center` | People, Services, Calendar, and custom API access |
+| [Planning Center Calendar](./planning-center-calendar) | `planning-center-calendar` | List events, instances, resource bookings, and reservations |
+| [Planning Center Groups](./planning-center-groups) | `planning-center-groups` | List groups, events, memberships, and attendance |
+| [Planning Center People](./planning-center-people) | `planning-center-people` | Search people, lists, field data, addresses, emails, phone numbers |
+| [Planning Center Publishing](./planning-center-publishing) | `planning-center-publishing` | Channels, episodes, series, speakers, and speakerships |
+| [Planning Center Registrations](./planning-center-registrations) | `planning-center-registrations` | Attendees, event forms, and registration data |
+| [Planning Center Services](./planning-center-services) | `planning-center-services` | Service plans, arrangements, and media |
+| [SermonShots](./sermonshots) | `sermonshots` | Sermon media management |
 
-## Roadmap
+## Getting Started
 
-Future pieces planned for this monorepo:
+Each piece is an independent Activeplaces package. To use a piece in your self-hosted Activeplaces instance:
 
-- `scriptdash`, `unifi`, `sermonshots`, `bitfocus-companion`, `propresenter`, `aja-kumo`, `blackmagic-atem`, `vimeo-church-workflows`
+1. Build the piece: `cd <piece-folder> && npx ts-node src/index.ts`
+2. Publish or copy the built artifact to your Activeplaces custom pieces directory
+3. Enable the piece in your Activeplaces platform settings
 
-See [docs/roadmap.md](docs/roadmap.md) for details.
-
-## Repository structure
-
-```text
-activepieces-custom-pieces/
-├── pieces/           # One directory per Piece
-├── examples/         # Sample inputs/outputs per action
-├── docs/             # Development and install guides
-└── package.json      # npm workspaces root
-```
-
-## Quick start
-
-### Install dependencies
+## Development
 
 ```bash
+# Navigate to a piece
+cd planning-center-people
+
+# Install dependencies
 npm install
-```
 
-### Build
-
-```bash
+# Build
 npm run build
-# or
-npm run build:planning-center
 ```
 
-### Develop locally
+## Requirements
 
-See [docs/local-development.md](docs/local-development.md) for:
-
-- Type-checking and builds
-- Testing inside an Activepieces fork (`AP_DEV_PIECES`)
-- Adding new pieces
-
-### Install on self-hosted Activepieces
-
-See [docs/self-hosted-install.md](docs/self-hosted-install.md) for building a `.tgz` bundle and uploading via Platform Admin.
-
-> **Note:** Final packaging uses the Activepieces CLI inside an Activepieces checkout. Verify steps against [current self-hosted docs](https://www.activepieces.com/docs/build-pieces/misc/build-piece).
-
-## Building a new Piece
-
-1. Copy the structure from `pieces/planning-center/`.
-2. Implement `src/index.ts` with `createPiece()`.
-3. Add `auth.ts`, `common/client.ts`, and one file per action under `src/actions/`.
-4. Add examples under `examples/<piece-name>/`.
-5. Document in `pieces/<piece-name>/README.md` and update `docs/roadmap.md`.
-
-Follow [Activepieces piece conventions](https://www.activepieces.com/docs/build-pieces/building-pieces/piece-definition):
-
-- TypeScript, strict mode
-- `createAction` / `createPiece` from `@activepieces/pieces-framework`
-- `httpClient` from `@activepieces/pieces-common`
-- `audience` and `aiMetadata` on actions
-- Never log secrets; return helpful errors
-
-## Local testing credentials
-
-Copy `.env.example` to `.env` for standalone smoke tests. **Do not commit credentials.**
+- Node.js 18+
+- Activeplaces self-hosted instance (v0.x or later)
+- API credentials for the respective services (Planning Center API key, etc.)
 
 ## License
 
-Add a license before public distribution if needed. Pieces in this repo are intended for private/self-hosted use unless otherwise noted.
+MIT

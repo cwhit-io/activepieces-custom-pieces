@@ -1,0 +1,9 @@
+# Exclude TypeScript source (piece-root src/), but keep compiled dist/src/
+*/src/
+**/node_modules
+**/.turbo
+**/*.ts
+**/tsconfig*.json
+**/.eslintrc.json
+**/*.tgz
+README.md

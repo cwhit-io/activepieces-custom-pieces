@@ -1,0 +1,17 @@
+{
+  "name": "@activepieces/piece-planning-center-calendar",
+  "version": "0.0.1",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json && cp package.json dist/ && cp -r src/i18n dist/src/",
+    "lint": "eslint 'src/**/*.ts'"
+  },
+  "dependencies": {
+    "@activepieces/pieces-common": "workspace:*",
+    "@activepieces/pieces-framework": "workspace:*"
+  },
+  "devDependencies": {
+    "tslib": "2.6.2"
+  }
+}
