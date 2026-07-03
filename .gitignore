@@ -1,7 +1,4 @@
 node_modules/
-dist/
 .turbo/
+dist/
 *.tgz
-.env
-.env.local
-.DS_Store

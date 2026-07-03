@@ -1,30 +1,49 @@
-import { createCustomApiCallAction } from '@activepieces/pieces-common';
 import { createPiece, PieceCategory } from '@activepieces/pieces-framework';
-import { planningCenterAuth } from './lib/auth';
+import { acceptScheduleAction } from './lib/actions/accept-schedule';
+import { addTeamMemberToPlanAction } from './lib/actions/add-team-member-to-plan';
+import { autoschedulePlanAction } from './lib/actions/autoschedule-plan';
+import { createItemAssignmentAction } from './lib/actions/create-item-assignment';
+import { createNeededPositionAction } from './lib/actions/create-needed-position';
+import { createPersonBlockoutAction } from './lib/actions/create-person-blockout';
 import { createPlanTimeAction } from './lib/actions/create-plan-time';
+import { createPlansAction } from './lib/actions/create-plans';
+import { declineScheduleAction } from './lib/actions/decline-schedule';
+import { getPersonAction } from './lib/actions/get-person';
 import { getPlanAction } from './lib/actions/get-plan';
+import { getPlanTeamSchedulingAction } from './lib/actions/get-plan-team-scheduling';
+import { listArrangementsAction } from './lib/actions/list-arrangements';
+import { listAvailableSignupsAction } from './lib/actions/list-available-signups';
+import { listItemAssignmentsAction } from './lib/actions/list-item-assignments';
 import { listNeededPositionsAction } from './lib/actions/list-needed-positions';
 import { listPersonBlockoutsAction } from './lib/actions/list-person-blockouts';
+import { listPersonPlanPeopleAction } from './lib/actions/list-person-plan-people';
+import { listPersonTeamPositionAssignmentsAction } from './lib/actions/list-person-team-position-assignments';
+import { listPlanItemsAction } from './lib/actions/list-plan-items';
 import { listPlanPeopleAction } from './lib/actions/list-plan-people';
 import { listPlanTeamMembersAction } from './lib/actions/list-plan-team-members';
 import { listPlanTimesAction } from './lib/actions/list-plan-times';
 import { listPlansAction } from './lib/actions/list-plans';
-import { listScheduleExceptionsAction } from './lib/actions/list-schedule-exceptions';
+import { listSchedulingPreferencesAction } from './lib/actions/list-schedule-exceptions';
 import { listSchedulingRequestsAction } from './lib/actions/list-scheduling-requests';
 import { listServiceTypesAction } from './lib/actions/list-service-types';
+import { listSignupTeamsAction } from './lib/actions/list-signup-teams';
+import { listSongsAction } from './lib/actions/list-songs';
 import { listTeamMembersAction } from './lib/actions/list-team-members';
 import { listTeamPositionsAction } from './lib/actions/list-team-positions';
 import { listTeamsAction } from './lib/actions/list-teams';
-import { planningCenterClient } from './lib/common/client';
-
-const PLANNING_CENTER_SERVICES_LOGO_URL = `data:image/svg+xml,${encodeURIComponent(
-	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#E8622A"/><rect x="14" y="18" width="36" height="30" rx="4" fill="#fff"/><rect x="14" y="18" width="36" height="8" rx="4" fill="#F4B183"/><circle cx="24" cy="22" r="2" fill="#E8622A"/><circle cx="32" cy="22" r="2" fill="#E8622A"/><circle cx="40" cy="22" r="2" fill="#E8622A"/><rect x="20" y="32" width="8" height="8" rx="1.5" fill="#E8622A"/><rect x="32" y="32" width="8" height="8" rx="1.5" fill="#E8622A"/><rect x="20" y="44" width="8" height="4" rx="1" fill="#F4B183"/></svg>',
-)}`;
+import { removePlanTeamMemberAction } from './lib/actions/remove-plan-team-member';
+import { updateNeededPositionAction } from './lib/actions/update-needed-position';
+import { updatePlanPersonAction } from './lib/actions/update-plan-person';
+import { updatePlanTeamMemberAction } from './lib/actions/update-plan-team-member';
+import { planningCenterAuth } from './lib/auth';
+import { createPlanningCenterCustomApiCallAction } from './lib/common/custom-api-call';
+import { PLANNING_CENTER_SERVICES_LOGO_URL } from './lib/logo';
+import { servicesWebhookTriggers } from './lib/triggers';
 
 export const planningCenterServices = createPiece({
 	displayName: 'Planning Center Services',
 	description:
-		'Scheduling automation for Planning Center Services — plans, teams, volunteers, and availability.',
+		'Scheduling automation for Planning Center Services — plans, teams, volunteers, availability, and webhooks.',
 	minimumSupportedRelease: '0.36.1',
 	logoUrl: PLANNING_CENTER_SERVICES_LOGO_URL,
 	categories: [PieceCategory.PRODUCTIVITY],
@@ -34,35 +53,43 @@ export const planningCenterServices = createPiece({
 		listServiceTypesAction,
 		listPlansAction,
 		getPlanAction,
+		getPlanTeamSchedulingAction,
 		listPlanTimesAction,
 		createPlanTimeAction,
+		createPlansAction,
+		autoschedulePlanAction,
 		listTeamsAction,
 		listTeamMembersAction,
 		listPlanTeamMembersAction,
+		addTeamMemberToPlanAction,
+		updatePlanTeamMemberAction,
+		removePlanTeamMemberAction,
 		listNeededPositionsAction,
+		createNeededPositionAction,
+		updateNeededPositionAction,
 		listPlanPeopleAction,
+		listPersonPlanPeopleAction,
+		updatePlanPersonAction,
 		listSchedulingRequestsAction,
+		acceptScheduleAction,
+		declineScheduleAction,
+		getPersonAction,
+		listPersonTeamPositionAssignmentsAction,
 		listPersonBlockoutsAction,
+		createPersonBlockoutAction,
+		listAvailableSignupsAction,
 		listTeamPositionsAction,
-		listScheduleExceptionsAction,
-		createCustomApiCallAction({
-			auth: planningCenterAuth,
-			baseUrl: () => planningCenterClient.BASE_URL,
-			authMapping: async (auth) => {
-				const credentials = planningCenterClient.credentialsFromAuthProps(
-					auth.props,
-				);
-				const encoded = Buffer.from(
-					`${credentials.applicationId}:${credentials.secret}`,
-				).toString('base64');
-
-				return {
-					Authorization: `Basic ${encoded}`,
-					'User-Agent':
-						'Activepieces Planning Center Services (https://activepieces.com)',
-				};
-			},
+		listSchedulingPreferencesAction,
+		listPlanItemsAction,
+		listItemAssignmentsAction,
+		createItemAssignmentAction,
+		listSignupTeamsAction,
+		listSongsAction,
+		listArrangementsAction,
+		createPlanningCenterCustomApiCallAction({
+			userAgent:
+				'Activepieces Planning Center Services (https://activepieces.com)',
 		}),
 	],
-	triggers: [],
+	triggers: [...servicesWebhookTriggers],
 });

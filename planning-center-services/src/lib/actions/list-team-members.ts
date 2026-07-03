@@ -18,19 +18,29 @@ export const listTeamMembersAction = createAction({
 	props: {
 		service_type: planningCenterCommon.serviceTypeDropdown,
 		team: planningCenterCommon.teamDropdown,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { team, fetch_all_pages } = context.propsValue;
+		const { team, page_size, max_results, fetch_all_pages } = context.propsValue;
 		const fetchAll = fetch_all_pages ?? true;
+
+		const queryParams: Record<string, string> = {};
+		if (page_size) {
+			queryParams['per_page'] = String(page_size);
+		}
+		const maxResults = max_results ? Number(max_results) : undefined;
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/services/v2/teams/${team}/team_members`,
+			path: `/services/v2/teams/${context.propsValue.team}/people`,
+			queryParams,
 			fetchAll,
+			maxResults,
 		});
 	},
 });

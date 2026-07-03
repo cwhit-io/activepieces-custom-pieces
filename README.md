@@ -1,45 +1,37 @@
 # Activepieces Custom Pieces
 
-A monorepo of custom **Activepieces** integrations — church, media, and IT tools for self-hosted deployments.
+Custom **Activepieces** integrations for church, media, and IT workflows — built for self-hosted deployments.
 
 ## Pieces
 
-| Piece | Package | Description |
-|-------|---------|-------------|
-| [Planning Center Calendar](./planning-center-calendar) | `planning-center-calendar` | List events, instances, resource bookings, and reservations |
-| [Planning Center Groups](./planning-center-groups) | `planning-center-groups` | List groups, events, memberships, and attendance |
-| [Planning Center People](./planning-center-people) | `planning-center-people` | Search people, lists, field data, addresses, emails, phone numbers |
-| [Planning Center Publishing](./planning-center-publishing) | `planning-center-publishing` | Channels, episodes, series, speakers, and speakerships |
-| [Planning Center Registrations](./planning-center-registrations) | `planning-center-registrations` | Attendees, event forms, and registration data |
-| [Planning Center Services](./planning-center-services) | `planning-center-services` | Service plans, arrangements, and media |
-| [SermonShots](./sermonshots) | `sermonshots` | Sermon media management |
+| Piece | Folder | Description |
+|-------|--------|-------------|
+| Planning Center People | `planning-center-people` | Profiles, lists, forms, workflows — **8 webhook triggers** |
+| Planning Center Services | `planning-center-services` | Plans, teams, scheduling — **Plan Updated** webhook |
+| Planning Center Publishing | `planning-center-publishing` | Channels, episodes, series — **Episode Created/Updated** webhooks |
+| Planning Center Groups | `planning-center-groups` | Memberships, applications — **5 webhook triggers** |
+| Planning Center Calendar | `planning-center-calendar` | Events, resources — **3 event-request webhooks** |
+| Planning Center Registrations | `planning-center-registrations` | Attendees and registration data (read-only) |
+| Vimeo Enhanced | `vimeo-custom` | Uploads, folders, captions, webhooks (polling triggers) |
+| SermonShots | `sermonshots` | Sermon media and related content |
+| Bitfocus Companion | `bitfocus-companion` | Companion satellite button control |
 
-## Getting Started
+Shared webhook engine: `planning-center-common` (used by all Planning Center pieces).
 
-Each piece is an independent Activeplaces package. To use a piece in your self-hosted Activeplaces instance:
-
-1. Build the piece: `cd <piece-folder> && npx ts-node src/index.ts`
-2. Publish or copy the built artifact to your Activeplaces custom pieces directory
-3. Enable the piece in your Activeplaces platform settings
-
-## Development
+## Build (from Activepieces monorepo root)
 
 ```bash
-# Navigate to a piece
-cd planning-center-people
-
-# Install dependencies
-npm install
-
-# Build
-npm run build
+./docker/build-custom-pieces.sh
+docker compose build app && docker compose up -d app worker
 ```
+
+See [VERSION_POLICY.md](./VERSION_POLICY.md) for versioning rules. Webhook docs: [PCO_WEBHOOK_PLAN.md](./PCO_WEBHOOK_PLAN.md), [PCO_WEBHOOKS_REF.md](./PCO_WEBHOOKS_REF.md).
 
 ## Requirements
 
 - Node.js 18+
-- Activeplaces self-hosted instance (v0.x or later)
-- API credentials for the respective services (Planning Center API key, etc.)
+- Self-hosted Activepieces instance
+- Planning Center Personal Access Token (webhook triggers need subscription permission)
 
 ## License
 

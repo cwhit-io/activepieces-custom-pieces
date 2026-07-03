@@ -61,6 +61,180 @@ const TSCONFIG_LIB = `{
   "include": ["src/**/*.ts"]
 }`;
 
+const CUSTOM_API_CALL_TEMPLATE = `import {
+	createCustomApiCallAction,
+	HttpError,
+	HttpMethod,
+	QueryParams,
+} from '@activepieces/pieces-common';
+import { createAction } from '@activepieces/pieces-framework';
+import { planningCenterAuth } from '../auth';
+import { planningCenterClient } from './client';
+import { planningCenterCommon } from './props';
+
+function resolveRequestUrl({
+	urlInput,
+	baseUrl,
+}: {
+	urlInput: string;
+	baseUrl: string;
+}): string {
+	if (urlInput.startsWith('http://') || urlInput.startsWith('https://')) {
+		return urlInput;
+	}
+	const normalizedBase = baseUrl.endsWith('/')
+		? baseUrl.slice(0, -1)
+		: baseUrl;
+	const relativePath = urlInput.startsWith('/')
+		? urlInput
+		: \`/\${urlInput}\`;
+	return \`\${normalizedBase}\${relativePath}\`;
+}
+
+function parsePlanningCenterGetRequest({
+	urlValue,
+	queryParams,
+}: {
+	urlValue: string;
+	queryParams?: QueryParams;
+}): { path: string; queryParams: Record<string, string> } | null {
+	const fullUrl = resolveRequestUrl({
+		urlInput: urlValue,
+		baseUrl: planningCenterClient.BASE_URL,
+	});
+
+	let parsed: URL;
+	try {
+		parsed = new URL(fullUrl);
+	} catch {
+		return null;
+	}
+
+	const baseOrigin = new URL(planningCenterClient.BASE_URL).origin;
+	if (parsed.origin !== baseOrigin) {
+		return null;
+	}
+
+	const mergedQuery: Record<string, string> = {};
+	for (const [key, value] of parsed.searchParams.entries()) {
+		mergedQuery[key] = value;
+	}
+	if (queryParams) {
+		for (const [key, value] of Object.entries(queryParams)) {
+			if (value !== undefined && value !== null) {
+				mergedQuery[key] = String(value);
+			}
+		}
+	}
+	delete mergedQuery['offset'];
+
+	return { path: parsed.pathname, queryParams: mergedQuery };
+}
+
+export function createPlanningCenterCustomApiCallAction({
+	userAgent,
+}: {
+	userAgent: string;
+}) {
+	const baseAction = createCustomApiCallAction({
+		auth: planningCenterAuth,
+		baseUrl: () => planningCenterClient.BASE_URL,
+		authMapping: async (auth) => {
+			const credentials = planningCenterClient.credentialsFromAuthProps(
+				auth.props,
+			);
+			const encoded = Buffer.from(
+				\`\${credentials.applicationId}:\${credentials.secret}\`,
+			).toString('base64');
+
+			return {
+				Authorization: \`Basic \${encoded}\`,
+				'User-Agent': userAgent,
+			};
+		},
+		extraProps: {
+			fetch_all_pages: planningCenterCommon.fetchAllPages,
+			max_results: planningCenterCommon.maxResults,
+		},
+	});
+
+	return createAction({
+		name: baseAction.name,
+		displayName: baseAction.displayName,
+		description: baseAction.description,
+		auth: planningCenterAuth,
+		requireAuth: baseAction.requireAuth,
+		audience: baseAction.audience,
+		props: {
+			...baseAction.props,
+			fetch_all_pages: planningCenterCommon.fetchAllPages,
+			max_results: planningCenterCommon.maxResults,
+		},
+		run: async (context) => {
+			const {
+				method,
+				url,
+				queryParams,
+				fetch_all_pages: fetchAllPages,
+				max_results: maxResultsInput,
+				response_is_binary,
+				failsafe,
+			} = context.propsValue;
+
+			const shouldPaginate =
+				(fetchAllPages ?? true) &&
+				method === HttpMethod.GET &&
+				!response_is_binary;
+
+			if (!shouldPaginate) {
+				return baseAction.run(context);
+			}
+
+			const urlValue = url?.['url'];
+			if (typeof urlValue !== 'string' || urlValue.length === 0) {
+				return baseAction.run(context);
+			}
+
+			const parsed = parsePlanningCenterGetRequest({
+				urlValue,
+				queryParams: (queryParams as QueryParams) ?? {},
+			});
+			if (!parsed) {
+				return baseAction.run(context);
+			}
+
+			try {
+				const credentials = planningCenterClient.credentialsFromAuthProps(
+					context.auth.props,
+				);
+				const maxResults =
+					maxResultsInput !== undefined && maxResultsInput !== null
+						? Number(maxResultsInput)
+						: undefined;
+
+				const body = await planningCenterClient.paginatedJsonApiListResponse({
+					credentials,
+					path: parsed.path,
+					queryParams: parsed.queryParams,
+					maxResults,
+				});
+
+				return {
+					status: 200,
+					headers: {},
+					body,
+				};
+			} catch (error) {
+				if (failsafe) {
+					return (error as HttpError).errorMessage();
+				}
+				throw error;
+			}
+		},
+	});
+}
+`;
+
 const CLIENT_TEMPLATE = (userAgent) => `import {
 	AuthenticationType,
 	httpClient,
@@ -162,31 +336,98 @@ async function apiCall<T extends HttpMessageBody>({
 	});
 }
 
-async function paginatedApiCall({
+function includedResourceKey(resource: JsonApiResource): string {
+	return \`\${resource.type}:\${resource.id}\`;
+}
+
+function mergeIncludedResources({
+	existing,
+	pageIncluded,
+}: {
+	existing: JsonApiResource[];
+	pageIncluded?: JsonApiResource[];
+}): JsonApiResource[] {
+	if (!pageIncluded?.length) {
+		return existing;
+	}
+	const seen = new Set(existing.map(includedResourceKey));
+	const merged = [...existing];
+	for (const resource of pageIncluded) {
+		const key = includedResourceKey(resource);
+		if (!seen.has(key)) {
+			seen.add(key);
+			merged.push(resource);
+		}
+	}
+	return merged;
+}
+
+function buildPaginatedListResponse({
+	data,
+	included,
+	meta,
+}: {
+	data: JsonApiResource[];
+	included: JsonApiResource[];
+	meta: JsonApiListResponse['meta'];
+}): JsonApiListResponse {
+	const response: JsonApiListResponse = {
+		data,
+		meta,
+		links: {},
+	};
+	if (included.length > 0) {
+		response.included = included;
+	}
+	return response;
+}
+
+async function paginatedJsonApiListResponse({
 	credentials,
 	path,
 	queryParams,
+	maxResults,
 }: {
 	credentials: PlanningCenterCredentials;
 	path: string;
 	queryParams?: Record<string, string>;
-}): Promise<JsonApiResource[]> {
+	maxResults?: number;
+}): Promise<JsonApiListResponse> {
 	const resources: JsonApiResource[] = [];
+	let included: JsonApiResource[] = [];
 	let offset = 0;
 	let hasMore = true;
+	let lastMeta: JsonApiListResponse['meta'];
+	const queryWithoutOffset = { ...queryParams };
+	delete queryWithoutOffset['offset'];
+
 	while (hasMore) {
 		const response = await apiCall<JsonApiListResponse>({
 			credentials,
 			method: HttpMethod.GET,
 			path,
 			queryParams: {
-				...queryParams,
+				...queryWithoutOffset,
 				per_page: String(DEFAULT_PER_PAGE),
 				offset: String(offset),
 			},
 		});
 		const pageResources = response.body.data ?? [];
 		resources.push(...pageResources);
+		included = mergeIncludedResources({
+			existing: included,
+			pageIncluded: response.body.included,
+		});
+		lastMeta = response.body.meta;
+
+		if (maxResults && resources.length >= maxResults) {
+			return buildPaginatedListResponse({
+				data: resources.slice(0, maxResults),
+				included,
+				meta: lastMeta,
+			});
+		}
+
 		const totalCount = response.body.meta?.total_count;
 		if (typeof totalCount === 'number') {
 			offset += pageResources.length;
@@ -196,7 +437,29 @@ async function paginatedApiCall({
 		hasMore = Boolean(response.body.links?.next) && pageResources.length > 0;
 		offset += pageResources.length;
 	}
-	return resources;
+
+	return buildPaginatedListResponse({
+		data: resources,
+		included,
+		meta: lastMeta,
+	});
+}
+
+async function paginatedApiCall({
+	credentials,
+	path,
+	queryParams,
+}: {
+	credentials: PlanningCenterCredentials;
+	path: string;
+	queryParams?: Record<string, string>;
+}): Promise<JsonApiResource[]> {
+	const response = await paginatedJsonApiListResponse({
+		credentials,
+		path,
+		queryParams,
+	});
+	return response.data ?? [];
 }
 
 async function listResources({
@@ -237,6 +500,7 @@ function credentialsFromAuthProps(
 export const planningCenterClient = {
 	apiCall,
 	paginatedApiCall,
+	paginatedJsonApiListResponse,
 	listResources,
 	flattenJsonApiResource,
 	flattenJsonApiCollection,
@@ -258,6 +522,7 @@ type JsonApiResource = {
 
 type JsonApiListResponse = {
 	data?: JsonApiResource[];
+	included?: JsonApiResource[];
 	links?: { next?: string };
 	meta?: { total_count?: number };
 };
@@ -949,6 +1214,13 @@ function propsTs(dropdowns) {
 			'When enabled, automatically fetches every page of results (up to API limits).',
 		required: false,
 		defaultValue: true,
+	}),
+
+	maxResults: Property.Number({
+		displayName: 'Max Results',
+		description:
+			'Optional. Maximum total results to return. Stops fetching once reached. Leave empty for no limit.',
+		required: false,
 	}),`);
 
 	if (dropdowns.includes('person')) {
@@ -1189,6 +1461,7 @@ for (const piece of PIECES) {
 	);
 
 	writeFileSync(join(dir, 'src/lib/common/client.ts'), CLIENT_TEMPLATE(piece.userAgent));
+	writeFileSync(join(dir, 'src/lib/common/custom-api-call.ts'), CUSTOM_API_CALL_TEMPLATE);
 	writeFileSync(join(dir, 'src/lib/auth.ts'), authTs(piece.validatePath, piece.validateScope));
 	writeFileSync(join(dir, 'src/lib/common/props.ts'), propsTs(piece.dropdowns));
 	writeFileSync(join(dir, 'src/i18n/translation.json'), '{}\n');
@@ -1211,11 +1484,10 @@ for (const piece of PIECES) {
 	const actionRefs = piece.actions.map((a) => `\t\t${a.export},`).join('\n');
 	const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${piece.logoColor}"/>${piece.logoIcon}</svg>`;
 
-	const indexTs = `import { createCustomApiCallAction } from '@activepieces/pieces-common';
-import { createPiece, PieceCategory } from '@activepieces/pieces-framework';
+	const indexTs = `import { createPiece, PieceCategory } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from './lib/auth';
 ${imports}
-import { planningCenterClient } from './lib/common/client';
+import { createPlanningCenterCustomApiCallAction } from './lib/common/custom-api-call';
 
 const ${piece.logoConst} = \`data:image/svg+xml,\${encodeURIComponent(
 	'${svg.replace(/'/g, "\\'")}',
@@ -1231,19 +1503,8 @@ export const ${piece.exportName} = createPiece({
 	authors: ['activepieces'],
 	actions: [
 ${actionRefs}
-		createCustomApiCallAction({
-			auth: planningCenterAuth,
-			baseUrl: () => planningCenterClient.BASE_URL,
-			authMapping: async (auth) => {
-				const credentials = planningCenterClient.credentialsFromAuthProps(auth.props);
-				const encoded = Buffer.from(
-					\`\${credentials.applicationId}:\${credentials.secret}\`,
-				).toString('base64');
-				return {
-					Authorization: \`Basic \${encoded}\`,
-					'User-Agent': '${piece.userAgent}',
-				};
-			},
+		createPlanningCenterCustomApiCallAction({
+			userAgent: '${piece.userAgent}',
 		}),
 	],
 	triggers: [],

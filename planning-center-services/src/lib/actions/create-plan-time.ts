@@ -30,30 +30,24 @@ export const createPlanTimeAction = createAction({
 				'The date and time for this plan time in ISO 8601 format (e.g. 2026-06-25T09:00:00Z).',
 			required: true,
 		}),
-		team_remind: Property.Checkbox({
-			displayName: 'Send Team Reminders',
-			description: 'Whether to send scheduling reminders to team members.',
-			required: false,
-			defaultValue: true,
-		}),
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { service_type, plan, name, time, team_remind } = context.propsValue;
+		const { name, time } = context.propsValue;
 
 		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
 			credentials,
 			method: HttpMethod.POST,
-			path: `/services/v2/service_types/${service_type}/plans/${plan}/plan_times`,
+			path: `/services/v2/service_types/${context.propsValue.service_type}/plans/${context.propsValue.plan}/plan_times`,
 			body: {
 				data: {
 					type: 'PlanTime',
 					attributes: {
 						name,
-						time,
-						team_remind: team_remind ?? true,
+						starts_at: time,
+						time_type: 'service',
 					},
 				},
 			},

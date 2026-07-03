@@ -28,7 +28,7 @@ export const getPlanAction = createAction({
 		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
 			credentials,
 			method: HttpMethod.GET,
-			path: `/services/v2/service_types/${service_type}/plans/${plan}`,
+			path: `/services/v2/service_types/${context.propsValue.service_type}/plans/${context.propsValue.plan}`,
 		});
 
 		if (!response.body.data) {

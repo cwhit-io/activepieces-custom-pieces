@@ -18,10 +18,7 @@ import { listVideosAction } from './lib/actions/list-videos';
 import { uploadVideoAction } from './lib/actions/upload-video';
 import { uploadVideoStreamingAction } from './lib/actions/upload-video-streaming';
 import { sermonshotsClient } from './lib/common/client';
-
-const SERMONSHOTS_LOGO_URL = `data:image/svg+xml,${encodeURIComponent(
-	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#5B4FE8"/><rect x="12" y="18" width="40" height="28" rx="4" fill="#fff"/><polygon points="28,26 28,38 40,32" fill="#5B4FE8"/><circle cx="48" cy="20" r="6" fill="#F59E0B"/><rect x="16" y="50" width="32" height="4" rx="2" fill="#fff" opacity="0.9"/></svg>',
-)}`;
+import { SERMONSHOTS_LOGO_URL } from './lib/logo';
 
 export const sermonshots = createPiece({
 	displayName: 'SermonShots',

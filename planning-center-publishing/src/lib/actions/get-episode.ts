@@ -8,7 +8,7 @@ export const getEpisodeAction = createAction({
 	auth: planningCenterAuth,
 	name: 'get_episode',
 	displayName: 'Get Episode',
-	description: 'Gets a single episode.',
+	description: 'Gets a single episode with optional related resources.',
 	audience: 'both',
 	aiMetadata: {
 		description: 'Get one episode including scripture, speaker, and publish status. Read-only and safe to retry.',
@@ -16,31 +16,63 @@ export const getEpisodeAction = createAction({
 	},
 	props: {
 		episode: planningCenterCommon.episodeDropdown,
+		include: planningCenterCommon.episodeInclude,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { episode } = context.propsValue;
+		const { episode, include } = context.propsValue;
 
-		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
+		const queryParams: Record<string, string> = {};
+		if (Array.isArray(include) && include.length > 0) {
+			queryParams['include'] = include.join(',');
+		}
+
+		const response = await planningCenterClient.apiCall<JsonApiEpisodeResponse>({
 			credentials,
 			method: HttpMethod.GET,
 			path: `/publishing/v2/episodes/${episode}`,
+			queryParams,
 		});
 
 		if (!response.body.data) {
 			throw new Error('Resource not found.');
 		}
 
-		return planningCenterClient.flattenJsonApiResource(response.body.data);
+		const included = response.body.included ?? [];
+		const result: Record<string, unknown> = {
+			...planningCenterClient.flattenJsonApiResource(response.body.data),
+			included,
+		};
+
+		if (Array.isArray(include) && include.length > 0) {
+			for (const includeKey of include) {
+				const typeMap: Record<string, string> = {
+					episode_resources: 'EpisodeResource',
+					speakerships: 'Speakership',
+					series: 'Series',
+				};
+				const resourceType = typeMap[includeKey];
+				if (resourceType) {
+					result[includeKey] = planningCenterClient.flattenJsonApiCollection(
+						included.filter((resource) => resource.type === resourceType),
+					);
+				}
+			}
+		}
+
+		return result;
 	},
 });
 
-type JsonApiSingleResponse = {
-	data?: {
-		type: string;
-		id: string;
-		attributes?: Record<string, unknown>;
-	};
+type JsonApiResource = {
+	type: string;
+	id: string;
+	attributes?: Record<string, unknown>;
+};
+
+type JsonApiEpisodeResponse = {
+	data?: JsonApiResource;
+	included?: JsonApiResource[];
 };

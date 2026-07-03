@@ -15,20 +15,29 @@ export const listEpisodeTimesAction = createAction({
 	},
 	props: {
 		episode: planningCenterCommon.episodeDropdown,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { episode, fetch_all_pages } = context.propsValue;
+		const { episode, page_size, max_results, fetch_all_pages } = context.propsValue;
 		const fetchAll = fetch_all_pages ?? true;
+
+		const queryParams: Record<string, string> = {};
+		if (page_size) {
+			queryParams['per_page'] = String(page_size);
+		}
+		const maxResults = max_results ? Number(max_results) : undefined;
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/publishing/v2/episodes/${episode}/episode_times`,
-			
+			path: `/publishing/v2/episodes/${context.propsValue.episode}/episode_times`,
+			queryParams,
 			fetchAll,
+			maxResults,
 		});
 	},
 });

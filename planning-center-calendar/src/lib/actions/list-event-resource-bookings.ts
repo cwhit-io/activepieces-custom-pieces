@@ -15,20 +15,29 @@ export const listEventResourceBookingsAction = createAction({
 	},
 	props: {
 		calendar_event: planningCenterCommon.calendarEventDropdown,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { calendar_event, fetch_all_pages } = context.propsValue;
+		const { calendar_event, page_size, max_results, fetch_all_pages } = context.propsValue;
 		const fetchAll = fetch_all_pages ?? true;
+
+		const queryParams: Record<string, string> = {};
+		if (page_size) {
+			queryParams['per_page'] = String(page_size);
+		}
+		const maxResults = max_results ? Number(max_results) : undefined;
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/calendar/v2/events/${calendar_event}/resource_bookings`,
-			
+			path: `/calendar/v2/events/${context.propsValue.calendar_event}/resource_bookings`,
+			queryParams,
 			fetchAll,
+			maxResults,
 		});
 	},
 });

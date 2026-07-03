@@ -15,20 +15,29 @@ export const listGroupMembershipsAction = createAction({
 	},
 	props: {
 		group: planningCenterCommon.groupDropdown,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { group, fetch_all_pages } = context.propsValue;
+		const { group, page_size, max_results, fetch_all_pages } = context.propsValue;
 		const fetchAll = fetch_all_pages ?? true;
+
+		const queryParams: Record<string, string> = {};
+		if (page_size) {
+			queryParams['per_page'] = String(page_size);
+		}
+		const maxResults = max_results ? Number(max_results) : undefined;
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/groups/v2/groups/${group}/memberships`,
-			
+			path: `/groups/v2/groups/${context.propsValue.group}/memberships`,
+			queryParams,
 			fetchAll,
+			maxResults,
 		});
 	},
 });

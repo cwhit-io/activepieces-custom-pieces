@@ -2,18 +2,22 @@ import { HttpMethod } from '@activepieces/pieces-common';
 import { createAction } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from '../auth';
 import { planningCenterClient } from '../common/client';
+import { planningCenterCommon } from '../common/props';
 
-export const getOrganizationAction = createAction({
+export const getResourceAction = createAction({
 	auth: planningCenterAuth,
-	name: 'get_organization',
-	displayName: 'Get Organization',
-	description: 'Gets Publishing organization settings.',
+	name: 'get_resource',
+	displayName: 'Get Resource',
+	description: 'Gets a single room or equipment resource by ID.',
 	audience: 'both',
 	aiMetadata: {
-		description: 'Get global Publishing organization settings and branding defaults. Read-only and safe to retry.',
+		description:
+			'Get one calendar resource (room or equipment) including location and quantity. Read-only and safe to retry.',
 		idempotent: true,
 	},
-	props: {},
+	props: {
+		resource: planningCenterCommon.calendarResourceDropdown,
+	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
@@ -22,7 +26,7 @@ export const getOrganizationAction = createAction({
 		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
 			credentials,
 			method: HttpMethod.GET,
-			path: '/publishing/v2/organization',
+			path: `/calendar/v2/resources/${context.propsValue.resource}`,
 		});
 
 		if (!response.body.data) {

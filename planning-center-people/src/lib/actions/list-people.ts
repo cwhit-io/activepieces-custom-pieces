@@ -1,7 +1,7 @@
 import { createAction } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from '../auth';
 import { planningCenterClient } from '../common/client';
-import { planningCenterCommon } from '../common/props';
+import { planningCenterCommon, planningCenterListOptions } from '../common/props';
 
 export const listPeopleAction = createAction({
 	auth: planningCenterAuth,
@@ -15,24 +15,29 @@ export const listPeopleAction = createAction({
 	},
 	props: {
 		person_search: planningCenterCommon.personSearch,
+		sort_direction: planningCenterCommon.sortDirection,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const fetchAll = context.propsValue.fetch_all_pages ?? true;
-		const queryParams: Record<string, string> = {};
+		const listOptions = planningCenterListOptions({
+			props: context.propsValue,
+			sortField: 'last_name',
+			dateField: 'created_at',
+		});
 		const { person_search } = context.propsValue;
 		if (typeof person_search === 'string' && person_search.length > 0) {
-			queryParams['where[search_name]'] = person_search;
+			listOptions.queryParams['where[search_name]'] = person_search;
 		}
 
 		return await planningCenterClient.listResources({
 			credentials,
 			path: '/people/v2/people',
-			queryParams,
-			fetchAll,
+			...listOptions,
 		});
 	},
 });

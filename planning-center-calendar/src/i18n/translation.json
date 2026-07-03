@@ -1,1 +1,16 @@
-{}
+{
+  "Planning Center Calendar": "Planning Center Calendar",
+  "Calendar events, resources, reservations, room bookings, and webhook triggers for Planning Center.": "Calendar events, resources, reservations, room bookings, and webhook triggers for Planning Center.",
+  "Personal Access Token": "Personal Access Token",
+  "Connect with a Planning Center Personal Access Token using HTTP Basic Auth.": "Connect with a Planning Center Personal Access Token using HTTP Basic Auth.",
+  "Application ID": "Application ID",
+  "The Application ID (client_id) shown when you create a Personal Access Token.": "The Application ID (client_id) shown when you create a Personal Access Token.",
+  "Secret": "Secret",
+  "The Secret shown once when you create a Personal Access Token. Store it securely.": "The Secret shown once when you create a Personal Access Token. Store it securely.",
+  "Event Request Submitted": "Event Request Submitted",
+  "Triggers when a calendar event request is submitted.": "Triggers when a calendar event request is submitted.",
+  "Event Request Approved": "Event Request Approved",
+  "Triggers when a calendar event request is approved.": "Triggers when a calendar event request is approved.",
+  "Event Request Updated": "Event Request Updated",
+  "Triggers when a calendar event request is updated.": "Triggers when a calendar event request is updated."
+}

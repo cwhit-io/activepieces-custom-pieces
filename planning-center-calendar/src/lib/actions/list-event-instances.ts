@@ -1,7 +1,7 @@
 import { createAction } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from '../auth';
 import { planningCenterClient } from '../common/client';
-import { planningCenterCommon } from '../common/props';
+import { planningCenterCommon, planningCenterListOptions } from '../common/props';
 
 export const listEventInstancesAction = createAction({
 	auth: planningCenterAuth,
@@ -15,20 +15,27 @@ export const listEventInstancesAction = createAction({
 	},
 	props: {
 		calendar_event: planningCenterCommon.calendarEventDropdown,
+		sort_direction: planningCenterCommon.sortDirection,
+		start_date: planningCenterCommon.startDate,
+		end_date: planningCenterCommon.endDate,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { calendar_event, fetch_all_pages } = context.propsValue;
-		const fetchAll = fetch_all_pages ?? true;
+		const listOptions = planningCenterListOptions({
+			props: context.propsValue,
+			sortField: 'starts_at',
+			dateField: 'starts_at',
+		});
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/calendar/v2/events/${calendar_event}/event_instances`,
-			
-			fetchAll,
+			path: `/calendar/v2/events/${context.propsValue.calendar_event}/event_instances`,
+			...listOptions,
 		});
 	},
 });

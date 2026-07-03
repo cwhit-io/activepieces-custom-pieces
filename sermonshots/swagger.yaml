@@ -1,0 +1,1000 @@
+openapi: 3.0.3
+info:
+  title: SermonShots API
+  description: API for managing sermon videos, transcriptions, and related content
+  version: 1.0.0
+  contact:
+    name: SermonShots Support
+
+servers:
+  - url: https://api.sermonshots.com
+    description: Production server
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: Public
+    description: Public endpoints (no authentication required)
+  - name: Videos
+    description: Video management and retrieval
+  - name: Sermon Content
+    description: Sermon-related content (summaries, blogs, quotes, etc.)
+  - name: Media
+    description: Media files (images, clips, downloadables)
+  - name: Upload
+    description: Video upload endpoints
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: auth-token
+
+  schemas:
+    VideoRequestQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+          description: Page number for pagination
+        limit:
+          type: integer
+          example: 10
+          description: Number of items per page
+        sort:
+          type: string
+          enum: [DESC, ASC]
+          example: DESC
+          description: Sort order
+
+    UploadVideoDto:
+      type: object
+      required:
+        - publicUrl
+        - language
+        - reencode
+        - filename
+      properties:
+        publicUrl:
+          type: string
+          format: uri
+          example: https://example.com/video.mp4
+          description: Public URL of the video to upload
+        language:
+          type: string
+          enum: [english, dutch, french, finnish, german, portuguese, russian, spanish, turkish]
+          example: english
+          description: Language of the video content
+        reencode:
+          type: boolean
+          example: false
+          description: Whether to re-encode the video
+        filename:
+          type: string
+          example: sermon-2024-01-15.mp4
+          description: Filename for the uploaded video
+        start:
+          type: number
+          example: 0
+          description: Start time in seconds (for trimming)
+        end:
+          type: number
+          example: 3600
+          description: End time in seconds (for trimming)
+
+    DownloadableRequestQuery:
+      type: object
+      properties:
+        withProjects:
+          type: boolean
+          example: true
+          description: Include projects in the response
+
+    ChurchMeta:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        logo:
+          type: string
+          format: uri
+
+    Video:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        owner:
+          type: string
+          description: User ID
+        name:
+          type: string
+          description: Video Title
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+        url:
+          type: string
+          description: Original Source URL
+        status:
+          type: string
+          description: Upload Status
+        format:
+          type: string
+          description: Video Resolution
+        source:
+          type: string
+          description: Upload Source
+        metadata:
+          type: object
+          properties:
+            done:
+              type: boolean
+            progressPercent:
+              type: integer
+            duration:
+              type: integer
+          description: Additional Metadata
+        transcriptionOptions:
+          type: object
+          properties:
+            automaticLanguageDetection:
+              type: boolean
+            language:
+              type: string
+          description: Transcription Options
+        audio:
+          $ref: "#/components/schemas/File"
+        preview:
+          $ref: "#/components/schemas/File"
+        file:
+          $ref: "#/components/schemas/File"
+      xml:
+        name: Video
+
+    File:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        remoteUrl:
+          type: string
+          description: Remote URL (not used)
+        publicUrl:
+          type: string
+          description: Public URL
+        cloudLocation:
+          type: string
+          description: GCS Location
+        isRemoved:
+          type: boolean
+          description: Removed Flag
+        owner:
+          type: string
+          description: User ID
+        createdAt:
+          type: string
+          description: date-time
+        lastUsed:
+          type: string
+          description: date-time
+        deletedAt:
+          type: string
+          description: date-time
+        type:
+          type: string
+          description: File Type (not used)
+        fileLocation:
+          type: string
+          description: File Location on the server (not used)
+      xml:
+        name: File
+
+    Transcription:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        operationId:
+          type: string
+          description: Operation ID (not used)
+        transcription:
+          type: object
+          description: Transcription Object
+        cachedSentences:
+          type: object
+          description: Cached Sentences
+        transcriptionId:
+          type: string
+          description: Transcription ID
+        summary:
+          type: string
+          description: Summary (not used)
+      xml:
+        name: Transcription
+
+    Summary:
+      type: object
+      properties:
+        Short:
+          type: string
+          description: Short Summary
+        Long:
+          type: string
+          description: Long Summary
+        YouTube:
+          type: string
+          description: Youtube Summary
+        Social Media Teaser:
+          type: string
+          description: Social Media Summary
+      xml:
+        name: Summary
+
+    Blog:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        title:
+          type: string
+        videoId:
+          type: integer
+
+    Devotional:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of devotional
+        devotional:
+          type: string
+          description: Devotional for the day
+        verse:
+          type: string
+          description: Bible Verse
+        quote:
+          type: string
+          description: Quote
+        question:
+          type: string
+          description: Question of the day
+        prayer:
+          type: string
+          description: Prayer for the day
+      xml:
+        name: Devotional
+
+    Quote:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        author:
+          type: string
+        videoId:
+          type: integer
+
+    Title:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        videoId:
+          type: integer
+
+    DiscussionGuide:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        videoId:
+          type: integer
+
+    UploadRequest:
+      title: Upload Request Object
+      type: object
+      properties:
+        publicUrl:
+          type: string
+          description: Publicly accesible URL to file
+        filename:
+          type: string
+          description: Filename of the Video
+        reencode:
+          type: boolean
+          description: Perform video optimization
+        language: 
+          type: string
+          enum: [en, nl, fr, fi, de, pt, ru, es, tr]
+      required:
+        - publicUrl
+        - filename
+        - reencode
+        - language
+    
+    Downloadable:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Short Summary
+        owner:
+          type: integer
+          description: User ID
+        type:
+          type: string
+          description: Type of Media
+        imageProjectId:
+          type: integer
+          description: Image Project associated with downloadable
+        clipProjectId:
+          type: integer
+          description: Image Project associated with downloadable
+        file:
+          file:
+          $ref: "#/components/schemas/File"
+        video:
+          file:
+          $ref: "#/components/schemas/Video"
+      xml:
+        name: Downloadable
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+
+paths:
+  # Public Endpoints
+  /api/v1/public/swagger.yaml:
+    get:
+      tags:
+        - Public
+      summary: Get OpenAPI specification
+      description: Retrieve the OpenAPI 3.0 specification in YAML format
+      operationId: getSwaggerYaml
+      responses:
+        '200':
+          description: OpenAPI specification retrieved successfully
+          content:
+            application/x-yaml:
+              schema:
+                type: string
+                example: |
+                  openapi: 3.0.3
+                  info:
+                    title: SermonShots API
+                    version: 1.0.0
+
+  /docs:
+    get:
+      tags:
+        - Public
+      summary: View API documentation
+      description: Interactive Swagger UI documentation for the API
+      operationId: getSwaggerUI
+      responses:
+        '200':
+          description: Swagger UI HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /api/v1/public/church/{churchName}:
+    get:
+      tags:
+        - Public
+      summary: Get church metadata
+      description: Retrieve metadata for a specific church
+      operationId: getChurchMeta
+      parameters:
+        - name: churchName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Name of the church
+          example: first-baptist
+      responses:
+        '200':
+          description: Church metadata retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChurchMeta'
+        '404':
+          description: Church not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Video Endpoints
+  /api/v1/videos:
+    get:
+      tags:
+        - Videos
+      summary: Get user videos
+      description: Retrieve a paginated list of videos for the authenticated user
+      operationId: getVideos
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Items per page
+          example: 10
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [DESC, ASC]
+          description: Sort order
+          example: DESC
+      responses:
+        '200':
+          description: Videos retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Video'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/video/{videoId}:
+    get:
+      tags:
+        - Videos
+      summary: Get video details
+      description: Retrieve detailed information about a specific video
+      operationId: getVideo
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Video ID
+          example: 123
+      responses:
+        '200':
+          description: Video details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Video'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Video not found
+
+  /api/v1/video/{videoId}/all:
+    get:
+      tags:
+        - Videos
+      summary: Get all related content
+      description: Retrieve all related content for a video (summary, blog, quotes, etc.)
+      operationId: getAllRelatedContent
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Video ID
+          example: 123
+      responses:
+        '200':
+          description: All related content retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    $ref: '#/components/schemas/Summary'
+                  blog:
+                    $ref: '#/components/schemas/Blog'
+                  devotionals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Devotional'
+                  quotes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+                  titles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Title'
+                  discussionGuide:
+                    $ref: '#/components/schemas/DiscussionGuide'
+                  transcription:
+                    $ref: '#/components/schemas/Transcription'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Video not found
+
+  # Sermon Content Endpoints
+  /api/v1/video/{videoId}/summary:
+    get:
+      tags:
+        - Sermon Content
+      summary: Get video summary
+      description: Retrieve the summary for a specific video
+      operationId: getSummary
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Summary'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Summary not found
+
+  /api/v1/video/{videoId}/blog:
+    get:
+      tags:
+        - Sermon Content
+      summary: Get blog post
+      description: Retrieve the blog post for a specific video
+      operationId: getBlog
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Blog post retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blog'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Blog not found
+
+  /api/v1/video/{videoId}/devotionals:
+    get:
+      tags:
+        - Sermon Content
+      summary: Get devotionals
+      description: Retrieve devotionals for a specific video
+      operationId: getDevotionals
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Devotionals retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Devotional'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Devotionals not found
+
+  /api/v1/video/{videoId}/quotes:
+    get:
+      tags:
+        - Sermon Content
+      summary: Get quotes
+      description: Retrieve quotes from a specific video
+      operationId: getQuotes
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Quotes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Quote'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Quotes not found
+
+  /api/v1/video/{videoId}/titles:
+    get:
+      tags:
+        - Sermon Content
+      summary: Get title suggestions
+      description: Retrieve title suggestions for a specific video
+      operationId: getTitles
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Titles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Title'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Titles not found
+
+  /api/v1/video/{videoId}/discussion-guide:
+    get:
+      tags:
+        - Sermon Content
+      summary: Get discussion guide
+      description: Retrieve the discussion guide for a specific video
+      operationId: getDiscussionGuide
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Discussion guide retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscussionGuide'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Discussion guide not found
+
+  /api/v1/video/{videoId}/transcription:
+    get:
+      tags:
+        - Sermon Content
+      summary: Get transcription
+      description: Retrieve the transcription for a specific video
+      operationId: getTranscription
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Transcription retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transcription'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Transcription not found
+
+  # Media Endpoints
+  /api/v1/video/{videoId}/images/{type}:
+    get:
+      tags:
+        - Media
+      summary: Get sermon images
+      description: Retrieve images for a specific video by type
+      operationId: getSermonImages
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Image type (e.g., thumbnail, quote)
+          example: thumbnail
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    url:
+                      type: string
+                      format: uri
+                    type:
+                      type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: Images not found
+
+  /api/v1/video/{videoId}/clips:
+    get:
+      tags:
+        - Media
+      summary: Get sermon clips
+      description: Retrieve video clips for a specific video
+      operationId: getSermonClips
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        '200':
+          description: Clips retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    url:
+                      type: string
+                      format: uri
+                    startTime:
+                      type: number
+                    endTime:
+                      type: number
+                    duration:
+                      type: number
+        '401':
+          description: Unauthorized
+        '404':
+          description: Clips not found
+
+  /api/v1/video/{videoId}/downloadable/{type}:
+    get:
+      tags:
+        - Media
+      summary: Get downloadable content
+      description: Retrieve downloadable content for a specific video by type
+      operationId: getDownloadable
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 123
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Downloadable type (e.g., clips, quote, thumbnail)
+          example: clips
+        - name: withProjects
+          in: query
+          schema:
+            type: boolean
+          description: Include projects in the response
+          example: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Downloadable"
+        "400":
+          description: Invalid ID supplied
+        "404":
+          description: Downloadable Contents Not Found
+        '401':
+          description: Unauthorized
+
+  # Upload Endpoints
+  /api/v1/video/upload/{source}:
+    post:
+      tags:
+        - Upload
+      summary: Upload video from HLS or DASH source
+      description: Upload a video from HLS or DASH streaming source
+      operationId: uploadHls
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [hls, dash]
+          description: Video source type
+          example: hls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadVideoDto'
+      responses:
+        '200':
+          description: Video upload initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/video/upload:
+    post:
+      tags:
+        - Upload
+      summary: Upload video
+      description: Upload a video from a public URL
+      operationId: upload
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadVideoDto'
+      responses:
+        '200':
+          description: Video upload initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

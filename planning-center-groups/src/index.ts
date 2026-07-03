@@ -1,19 +1,28 @@
-import { createCustomApiCallAction } from '@activepieces/pieces-common';
 import { createPiece, PieceCategory } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from './lib/auth';
 import { listGroupsAction } from './lib/actions/list-groups';
+import { getGroupAction } from './lib/actions/get-group';
 import { listGroupMembershipsAction } from './lib/actions/list-group-memberships';
+import { addGroupMembershipAction } from './lib/actions/add-group-membership';
+import { updateMembershipAction } from './lib/actions/update-membership';
+import { removeMembershipAction } from './lib/actions/remove-membership';
 import { listGroupEventsAction } from './lib/actions/list-group-events';
+import { listAllEventsAction } from './lib/actions/list-all-events';
+import { getGroupEventAction } from './lib/actions/get-group-event';
+import { listRsvpsAction } from './lib/actions/list-rsvps';
 import { listEventAttendancesAction } from './lib/actions/list-event-attendances';
-import { planningCenterClient } from './lib/common/client';
-
-const PLANNING_CENTER_GROUPS_LOGO_URL = `data:image/svg+xml,${encodeURIComponent(
-	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#10B981"/><circle cx="22" cy="28" r="7" fill="#fff"/><circle cx="42" cy="28" r="7" fill="#fff"/><circle cx="32" cy="20" r="7" fill="#fff"/></svg>',
-)}`;
+import { listEventNotesAction } from './lib/actions/list-event-notes';
+import { listGroupApplicationsAction } from './lib/actions/list-group-applications';
+import { getGroupApplicationAction } from './lib/actions/get-group-application';
+import { listGroupTypesAction } from './lib/actions/list-group-types';
+import { createPlanningCenterCustomApiCallAction } from './lib/common/custom-api-call';
+import { PLANNING_CENTER_GROUPS_LOGO_URL } from './lib/logo';
+import { groupsWebhookTriggers } from './lib/triggers';
 
 export const planningCenterGroups = createPiece({
 	displayName: 'Planning Center Groups',
-	description: 'Small groups, memberships, events, and attendance for Planning Center Groups.',
+	description:
+		'Small groups, memberships, events, attendance, and webhook triggers for Planning Center Groups.',
 	minimumSupportedRelease: '0.36.1',
 	logoUrl: PLANNING_CENTER_GROUPS_LOGO_URL,
 	categories: [PieceCategory.PRODUCTIVITY],
@@ -21,23 +30,24 @@ export const planningCenterGroups = createPiece({
 	authors: ['activepieces'],
 	actions: [
 		listGroupsAction,
+		getGroupAction,
 		listGroupMembershipsAction,
+		addGroupMembershipAction,
+		updateMembershipAction,
+		removeMembershipAction,
 		listGroupEventsAction,
+		listAllEventsAction,
+		getGroupEventAction,
+		listRsvpsAction,
 		listEventAttendancesAction,
-		createCustomApiCallAction({
-			auth: planningCenterAuth,
-			baseUrl: () => planningCenterClient.BASE_URL,
-			authMapping: async (auth) => {
-				const credentials = planningCenterClient.credentialsFromAuthProps(auth.props);
-				const encoded = Buffer.from(
-					`${credentials.applicationId}:${credentials.secret}`,
-				).toString('base64');
-				return {
-					Authorization: `Basic ${encoded}`,
-					'User-Agent': 'Activepieces Planning Center Groups (https://activepieces.com)',
-				};
-			},
+		listEventNotesAction,
+		listGroupApplicationsAction,
+		getGroupApplicationAction,
+		listGroupTypesAction,
+		createPlanningCenterCustomApiCallAction({
+			userAgent:
+				'Activepieces Planning Center Groups (https://activepieces.com)',
 		}),
 	],
-	triggers: [],
+	triggers: [...groupsWebhookTriggers],
 });

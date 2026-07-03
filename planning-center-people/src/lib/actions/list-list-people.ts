@@ -15,20 +15,29 @@ export const listListPeopleAction = createAction({
 	},
 	props: {
 		list: planningCenterCommon.listDropdown,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { list, fetch_all_pages } = context.propsValue;
+		const { list, page_size, max_results, fetch_all_pages } = context.propsValue;
 		const fetchAll = fetch_all_pages ?? true;
+
+		const queryParams: Record<string, string> = {};
+		if (page_size) {
+			queryParams['per_page'] = String(page_size);
+		}
+		const maxResults = max_results ? Number(max_results) : undefined;
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/people/v2/lists/${list}/people`,
-			
+			path: `/people/v2/lists/${context.propsValue.list}/people`,
+			queryParams,
 			fetchAll,
+			maxResults,
 		});
 	},
 });

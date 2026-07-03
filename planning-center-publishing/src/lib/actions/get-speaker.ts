@@ -26,7 +26,7 @@ export const getSpeakerAction = createAction({
 		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
 			credentials,
 			method: HttpMethod.GET,
-			path: `/publishing/v2/speakers/${speaker}`,
+			path: `/publishing/v2/speakers/${context.propsValue.speaker}`,
 		});
 
 		if (!response.body.data) {

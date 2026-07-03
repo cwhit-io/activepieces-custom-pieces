@@ -13,7 +13,9 @@ export const planningCenterAuth = PieceAuth.CustomAuth({
 1. Sign in to your [Planning Center developer account](https://api.planningcenteronline.com/personal_access_tokens)
 2. Create a new **Personal Access Token**
 3. Copy the **Application ID** and **Secret**
-4. Paste them into the fields below`,
+4. Paste them into the fields below
+
+Webhook triggers require permission to manage Planning Center webhook subscriptions.`,
 		}),
 		application_id: Property.ShortText({
 			displayName: 'Application ID',

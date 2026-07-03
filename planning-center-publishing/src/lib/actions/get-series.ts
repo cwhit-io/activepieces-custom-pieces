@@ -26,7 +26,7 @@ export const getSeriesAction = createAction({
 		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
 			credentials,
 			method: HttpMethod.GET,
-			path: `/publishing/v2/series/${series}`,
+			path: `/publishing/v2/series/${context.propsValue.series}`,
 		});
 
 		if (!response.body.data) {

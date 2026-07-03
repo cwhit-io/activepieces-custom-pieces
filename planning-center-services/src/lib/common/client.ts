@@ -73,6 +73,98 @@ function getStringAttribute(
 	return typeof value === 'string' ? value : null;
 }
 
+function readRelationshipId({
+	resource,
+	relationshipName,
+}: {
+	resource: JsonApiResource;
+	relationshipName: string;
+}): string | null {
+	const relationships = resource.relationships;
+	if (!relationships || typeof relationships !== 'object') {
+		return null;
+	}
+
+	const relationship = relationships[relationshipName];
+	if (!relationship || typeof relationship !== 'object') {
+		return null;
+	}
+
+	if (!('data' in relationship)) {
+		return null;
+	}
+
+	const data = relationship.data;
+	if (!data || typeof data !== 'object' || !('id' in data)) {
+		return null;
+	}
+
+	const id = data.id;
+	return typeof id === 'string' ? id : null;
+}
+
+async function loadTeamPositionNames({
+	credentials,
+	teamId,
+}: {
+	credentials: PlanningCenterCredentials;
+	teamId: string;
+}): Promise<Set<string>> {
+	const positions = await paginatedApiCall({
+		credentials,
+		path: `/services/v2/teams/${teamId}/team_positions`,
+	});
+	const names = new Set<string>();
+	for (const position of positions) {
+		const name = getStringAttribute(position, 'name');
+		if (name) {
+			names.add(name);
+		}
+	}
+	return names;
+}
+
+function resourceMatchesTeam({
+	resource,
+	teamId,
+	teamPositionNames,
+}: {
+	resource: JsonApiResource;
+	teamId: string;
+	teamPositionNames: Set<string>;
+}): boolean {
+	if (readRelationshipId({ resource, relationshipName: 'team' }) === teamId) {
+		return true;
+	}
+
+	const teamIdAttribute = resource.attributes?.['team_id'];
+	if (typeof teamIdAttribute === 'string' && teamIdAttribute === teamId) {
+		return true;
+	}
+
+	const positionName = getStringAttribute(resource, 'team_position_name');
+	if (positionName && teamPositionNames.has(positionName)) {
+		return true;
+	}
+
+	return false;
+}
+
+async function filterResourcesByTeam({
+	credentials,
+	resources,
+	teamId,
+}: {
+	credentials: PlanningCenterCredentials;
+	resources: JsonApiResource[];
+	teamId: string;
+}): Promise<JsonApiResource[]> {
+	const teamPositionNames = await loadTeamPositionNames({ credentials, teamId });
+	return resources.filter((resource) =>
+		resourceMatchesTeam({ resource, teamId, teamPositionNames }),
+	);
+}
+
 async function apiCall<T extends HttpMessageBody>({
 	credentials,
 	method,
@@ -111,18 +203,162 @@ async function apiCall<T extends HttpMessageBody>({
 	});
 }
 
-async function paginatedApiCall({
+function resolvePerPage({
+	queryParams,
+	maxResults,
+}: {
+	queryParams?: Record<string, string>;
+	maxResults?: number;
+}): number {
+	const requested = queryParams?.['per_page']
+		? Number(queryParams['per_page'])
+		: undefined;
+	if (requested && requested > 0) {
+		return Math.min(requested, DEFAULT_PER_PAGE);
+	}
+	if (maxResults && maxResults > 0) {
+		return Math.min(maxResults, DEFAULT_PER_PAGE);
+	}
+	return DEFAULT_PER_PAGE;
+}
+
+function parseFilterTimestamp(value: unknown): number | null {
+	if (typeof value !== 'string' || value.length === 0) {
+		return null;
+	}
+	const timestamp = Date.parse(value);
+	return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function compareFilterValues(
+	left: unknown,
+	right: unknown,
+): number {
+	const leftTimestamp = parseFilterTimestamp(left);
+	const rightTimestamp = parseFilterTimestamp(right);
+	if (leftTimestamp !== null && rightTimestamp !== null) {
+		return leftTimestamp - rightTimestamp;
+	}
+	if (typeof left === 'number' && typeof right === 'number') {
+		return left - right;
+	}
+	return String(left ?? '').localeCompare(String(right ?? ''));
+}
+
+function applyClientFilters(
+	items: Record<string, unknown>[],
+	filters?: ClientFilters,
+): Record<string, unknown>[] {
+	if (!filters) {
+		return items;
+	}
+
+	let result = items;
+	const hasDateFilter = Boolean(filters.startDate ?? filters.endDate);
+
+	if (hasDateFilter) {
+		const startTs = filters.startDate
+			? parseFilterTimestamp(filters.startDate)
+			: null;
+		const endTs = filters.endDate
+			? parseFilterTimestamp(filters.endDate)
+			: null;
+
+		result = result.filter((item) => {
+			const itemTs = parseFilterTimestamp(item[filters.dateField]);
+			if (itemTs === null) {
+				return false;
+			}
+			if (startTs !== null && itemTs < startTs) {
+				return false;
+			}
+			if (endTs !== null && itemTs > endTs) {
+				return false;
+			}
+			return true;
+		});
+	}
+
+	if (filters.sortField && filters.sortDirection) {
+		const direction = filters.sortDirection === 'desc' ? -1 : 1;
+		result = [...result].sort(
+			(left, right) =>
+				direction *
+				compareFilterValues(
+					left[filters.sortField],
+					right[filters.sortField],
+				),
+		);
+	}
+
+	return result;
+}
+
+function includedResourceKey(resource: JsonApiResource): string {
+	return `${resource.type}:${resource.id}`;
+}
+
+function mergeIncludedResources({
+	existing,
+	pageIncluded,
+}: {
+	existing: JsonApiResource[];
+	pageIncluded?: JsonApiResource[];
+}): JsonApiResource[] {
+	if (!pageIncluded?.length) {
+		return existing;
+	}
+	const seen = new Set(existing.map(includedResourceKey));
+	const merged = [...existing];
+	for (const resource of pageIncluded) {
+		const key = includedResourceKey(resource);
+		if (!seen.has(key)) {
+			seen.add(key);
+			merged.push(resource);
+		}
+	}
+	return merged;
+}
+
+function buildPaginatedListResponse({
+	data,
+	included,
+	meta,
+}: {
+	data: JsonApiResource[];
+	included: JsonApiResource[];
+	meta: JsonApiListResponse['meta'];
+}): JsonApiListResponse {
+	const response: JsonApiListResponse = {
+		data,
+		meta,
+		links: {},
+	};
+	if (included.length > 0) {
+		response.included = included;
+	}
+	return response;
+}
+
+async function paginatedJsonApiListResponse({
 	credentials,
 	path,
 	queryParams,
+	maxResults,
 }: {
 	credentials: PlanningCenterCredentials;
 	path: string;
 	queryParams?: Record<string, string>;
-}): Promise<JsonApiResource[]> {
+	maxResults?: number;
+}): Promise<JsonApiListResponse> {
 	const resources: JsonApiResource[] = [];
+	let included: JsonApiResource[] = [];
 	let offset = 0;
 	let hasMore = true;
+	const perPage = resolvePerPage({ queryParams, maxResults });
+	let lastMeta: JsonApiListResponse['meta'];
+	const queryWithoutOffset = { ...queryParams };
+	delete queryWithoutOffset['offset'];
 
 	while (hasMore) {
 		const response = await apiCall<JsonApiListResponse>({
@@ -130,14 +366,27 @@ async function paginatedApiCall({
 			method: HttpMethod.GET,
 			path,
 			queryParams: {
-				...queryParams,
-				per_page: String(DEFAULT_PER_PAGE),
+				...queryWithoutOffset,
+				per_page: String(perPage),
 				offset: String(offset),
 			},
 		});
 
 		const pageResources = response.body.data ?? [];
 		resources.push(...pageResources);
+		included = mergeIncludedResources({
+			existing: included,
+			pageIncluded: response.body.included,
+		});
+		lastMeta = response.body.meta;
+
+		if (maxResults && resources.length >= maxResults) {
+			return buildPaginatedListResponse({
+				data: resources.slice(0, maxResults),
+				included,
+				meta: lastMeta,
+			});
+		}
 
 		const totalCount = response.body.meta?.total_count;
 		if (typeof totalCount === 'number') {
@@ -150,7 +399,31 @@ async function paginatedApiCall({
 		offset += pageResources.length;
 	}
 
-	return resources;
+	return buildPaginatedListResponse({
+		data: resources,
+		included,
+		meta: lastMeta,
+	});
+}
+
+async function paginatedApiCall({
+	credentials,
+	path,
+	queryParams,
+	maxResults,
+}: {
+	credentials: PlanningCenterCredentials;
+	path: string;
+	queryParams?: Record<string, string>;
+	maxResults?: number;
+}): Promise<JsonApiResource[]> {
+	const response = await paginatedJsonApiListResponse({
+		credentials,
+		path,
+		queryParams,
+		maxResults,
+	});
+	return response.data ?? [];
 }
 
 async function listResources({
@@ -158,24 +431,52 @@ async function listResources({
 	path,
 	queryParams,
 	fetchAll,
+	maxResults,
+	clientFilters,
+	teamId,
 }: {
 	credentials: PlanningCenterCredentials;
 	path: string;
 	queryParams?: Record<string, string>;
 	fetchAll: boolean;
+	maxResults?: number;
+	clientFilters?: ClientFilters;
+	teamId?: string;
 }): Promise<Record<string, unknown>[]> {
-	const resources = fetchAll
-		? await paginatedApiCall({ credentials, path, queryParams })
+	const requestQueryParams = { ...queryParams };
+	if (teamId) {
+		requestQueryParams['include'] = 'team';
+	}
+
+	let resources = fetchAll
+		? await paginatedApiCall({
+				credentials,
+				path,
+				queryParams: requestQueryParams,
+				maxResults,
+			})
 		: (
 				await apiCall<JsonApiListResponse>({
 					credentials,
 					method: HttpMethod.GET,
 					path,
-					queryParams,
+					queryParams: requestQueryParams,
 				})
 			).body.data ?? [];
 
-	return flattenJsonApiCollection(resources);
+	if (teamId) {
+		resources = await filterResourcesByTeam({
+			credentials,
+			resources,
+			teamId,
+		});
+	}
+
+	const collection = applyClientFilters(
+		flattenJsonApiCollection(resources),
+		clientFilters,
+	);
+	return maxResults ? collection.slice(0, maxResults) : collection;
 }
 
 function credentialsFromAuthProps(
@@ -197,17 +498,27 @@ function credentialsFromAuthProps(
 export const planningCenterClient = {
 	apiCall,
 	paginatedApiCall,
+	paginatedJsonApiListResponse,
 	listResources,
 	flattenJsonApiResource,
 	flattenJsonApiCollection,
 	getStringAttribute,
 	credentialsFromAuthProps,
 	BASE_URL,
+	DEFAULT_PER_PAGE,
 };
 
 export type PlanningCenterCredentials = {
 	applicationId: string;
 	secret: string;
+};
+
+export type ClientFilters = {
+	dateField: string;
+	startDate?: string;
+	endDate?: string;
+	sortField: string;
+	sortDirection?: string;
 };
 
 type JsonApiResource = {
@@ -219,6 +530,7 @@ type JsonApiResource = {
 
 type JsonApiListResponse = {
 	data?: JsonApiResource[];
+	included?: JsonApiResource[];
 	links?: {
 		next?: string;
 	};

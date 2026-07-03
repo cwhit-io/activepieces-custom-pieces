@@ -36,7 +36,7 @@ export const planningCenterAuth = PieceAuth.CustomAuth({
 					secret: auth.secret,
 				},
 				method: HttpMethod.GET,
-				path: '/registrations/v2/events',
+				path: '/registrations/v2/signups',
 				queryParams: { per_page: '1' },
 			});
 			return { valid: true };

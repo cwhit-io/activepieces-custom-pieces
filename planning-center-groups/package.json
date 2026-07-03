@@ -1,6 +1,6 @@
 {
   "name": "@activepieces/piece-planning-center-groups",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "scripts": {
@@ -8,6 +8,7 @@
     "lint": "eslint 'src/**/*.ts'"
   },
   "dependencies": {
+    "@activepieces/piece-planning-center-common": "workspace:*",
     "@activepieces/pieces-common": "workspace:*",
     "@activepieces/pieces-framework": "workspace:*"
   },

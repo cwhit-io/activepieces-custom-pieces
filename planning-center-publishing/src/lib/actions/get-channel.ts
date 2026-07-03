@@ -26,7 +26,7 @@ export const getChannelAction = createAction({
 		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
 			credentials,
 			method: HttpMethod.GET,
-			path: `/publishing/v2/channels/${channel}`,
+			path: `/publishing/v2/channels/${context.propsValue.channel}`,
 		});
 
 		if (!response.body.data) {

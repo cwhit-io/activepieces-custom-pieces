@@ -26,7 +26,7 @@ export const getPersonAction = createAction({
 		const response = await planningCenterClient.apiCall<JsonApiSingleResponse>({
 			credentials,
 			method: HttpMethod.GET,
-			path: `/people/v2/people/${person}`,
+			path: `/people/v2/people/${context.propsValue.person}`,
 		});
 
 		if (!response.body.data) {

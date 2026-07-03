@@ -1,21 +1,28 @@
-import { createCustomApiCallAction } from '@activepieces/pieces-common';
 import { createPiece, PieceCategory } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from './lib/auth';
 import { listEventsAction } from './lib/actions/list-events';
+import { getSignupAction } from './lib/actions/get-signup';
 import { listAttendeesAction } from './lib/actions/list-attendees';
+import { getAttendeeAction } from './lib/actions/get-attendee';
+import { listAllAttendeesAction } from './lib/actions/list-all-attendees';
+import { getAttendeePersonAction } from './lib/actions/get-attendee-person';
+import { getAttendeeSelectionTypeAction } from './lib/actions/get-attendee-selection-type';
 import { listRegistrationsAction } from './lib/actions/list-registrations';
+import { getRegistrationAction } from './lib/actions/get-registration';
+import { getRegistrantContactAction } from './lib/actions/get-registrant-contact';
 import { listEventFormsAction } from './lib/actions/list-event-forms';
-import { listFormFieldsAction } from './lib/actions/list-form-fields';
-import { listRegistrationAnswersAction } from './lib/actions/list-registration-answers';
-import { planningCenterClient } from './lib/common/client';
-
-const PLANNING_CENTER_REGISTRATIONS_LOGO_URL = `data:image/svg+xml,${encodeURIComponent(
-	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#8B5CF6"/><rect x="18" y="16" width="28" height="34" rx="4" fill="#fff"/><rect x="24" y="10" width="16" height="8" rx="3" fill="#fff"/></svg>',
-)}`;
+import { listSignupTimesAction } from './lib/actions/list-form-fields';
+import { listSignupRegistrationsAction } from './lib/actions/list-registration-answers';
+import { getNextSignupTimeAction } from './lib/actions/get-next-signup-time';
+import { getSignupLocationAction } from './lib/actions/get-signup-location';
+import { listCategoriesAction } from './lib/actions/list-categories';
+import { createPlanningCenterCustomApiCallAction } from './lib/common/custom-api-call';
+import { PLANNING_CENTER_REGISTRATIONS_LOGO_URL } from './lib/logo';
 
 export const planningCenterRegistrations = createPiece({
 	displayName: 'Planning Center Registrations',
-	description: 'Events, attendees, registrations, forms, and answers for Planning Center Registrations.',
+	description:
+		'Signups, attendees, registrations, selection types, and signup times for Planning Center Registrations.',
 	minimumSupportedRelease: '0.36.1',
 	logoUrl: PLANNING_CENTER_REGISTRATIONS_LOGO_URL,
 	categories: [PieceCategory.PRODUCTIVITY],
@@ -23,24 +30,24 @@ export const planningCenterRegistrations = createPiece({
 	authors: ['activepieces'],
 	actions: [
 		listEventsAction,
+		getSignupAction,
 		listAttendeesAction,
+		getAttendeeAction,
+		listAllAttendeesAction,
+		getAttendeePersonAction,
+		getAttendeeSelectionTypeAction,
 		listRegistrationsAction,
+		getRegistrationAction,
+		getRegistrantContactAction,
 		listEventFormsAction,
-		listFormFieldsAction,
-		listRegistrationAnswersAction,
-		createCustomApiCallAction({
-			auth: planningCenterAuth,
-			baseUrl: () => planningCenterClient.BASE_URL,
-			authMapping: async (auth) => {
-				const credentials = planningCenterClient.credentialsFromAuthProps(auth.props);
-				const encoded = Buffer.from(
-					`${credentials.applicationId}:${credentials.secret}`,
-				).toString('base64');
-				return {
-					Authorization: `Basic ${encoded}`,
-					'User-Agent': 'Activepieces Planning Center Registrations (https://activepieces.com)',
-				};
-			},
+		listSignupTimesAction,
+		listSignupRegistrationsAction,
+		getNextSignupTimeAction,
+		getSignupLocationAction,
+		listCategoriesAction,
+		createPlanningCenterCustomApiCallAction({
+			userAgent:
+				'Activepieces Planning Center Registrations (https://activepieces.com)',
 		}),
 	],
 	triggers: [],

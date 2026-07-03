@@ -1,7 +1,7 @@
 import { createAction, Property } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from '../auth';
 import { planningCenterClient } from '../common/client';
-import { planningCenterCommon } from '../common/props';
+import { planningCenterCommon, planningCenterListOptions } from '../common/props';
 
 export const listPlansAction = createAction({
 	auth: planningCenterAuth,
@@ -30,28 +30,45 @@ export const listPlansAction = createAction({
 				],
 			},
 		}),
+		sort_direction: planningCenterCommon.sortDirection,
+		start_date: planningCenterCommon.startDate,
+		end_date: planningCenterCommon.endDate,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { service_type, plan_filter, fetch_all_pages } = context.propsValue;
-		const fetchAll = fetch_all_pages ?? true;
+		const { service_type, plan_filter, sort_direction } = context.propsValue;
+		const listOptions = planningCenterListOptions({
+			props: context.propsValue,
+			sortField: 'sort_date',
+			dateField: 'sort_date',
+		});
 
-		const queryParams: Record<string, string> = {
-			order: 'sort_date',
-		};
+		delete listOptions.queryParams['where[sort_date][gte]'];
+		delete listOptions.queryParams['where[sort_date][lte]'];
 
 		if (plan_filter && plan_filter !== 'all') {
-			queryParams['filter'] = plan_filter;
+			listOptions.queryParams['filter'] = plan_filter;
+		} else if (listOptions.clientFilters.startDate) {
+			listOptions.queryParams['filter'] = 'after';
+			listOptions.queryParams['after'] = listOptions.clientFilters.startDate;
+		} else if (listOptions.clientFilters.endDate) {
+			listOptions.queryParams['filter'] = 'before';
+			listOptions.queryParams['before'] = listOptions.clientFilters.endDate;
+		}
+
+		if (!sort_direction && !listOptions.queryParams['order']) {
+			listOptions.queryParams['order'] = 'sort_date';
 		}
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/services/v2/service_types/${service_type}/plans`,
-			queryParams,
-			fetchAll,
+			path: `/services/v2/service_types/${context.propsValue.service_type}/plans`,
+			...listOptions,
 		});
 	},
 });

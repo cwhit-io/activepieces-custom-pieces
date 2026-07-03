@@ -1,7 +1,7 @@
 import { createAction } from '@activepieces/pieces-framework';
 import { planningCenterAuth } from '../auth';
 import { planningCenterClient } from '../common/client';
-import { planningCenterCommon } from '../common/props';
+import { planningCenterCommon, planningCenterListOptions } from '../common/props';
 
 export const listTeamsAction = createAction({
 	auth: planningCenterAuth,
@@ -16,19 +16,25 @@ export const listTeamsAction = createAction({
 	},
 	props: {
 		service_type: planningCenterCommon.serviceTypeDropdown,
+		sort_direction: planningCenterCommon.sortDirection,
+		page_size: planningCenterCommon.pageSize,
+		max_results: planningCenterCommon.maxResults,
 		fetch_all_pages: planningCenterCommon.fetchAllPages,
 	},
 	async run(context) {
 		const credentials = planningCenterClient.credentialsFromAuthProps(
 			context.auth.props,
 		);
-		const { service_type, fetch_all_pages } = context.propsValue;
-		const fetchAll = fetch_all_pages ?? true;
+		const listOptions = planningCenterListOptions({
+			props: context.propsValue,
+			sortField: 'name',
+			dateField: 'created_at',
+		});
 
 		return await planningCenterClient.listResources({
 			credentials,
-			path: `/services/v2/service_types/${service_type}/teams`,
-			fetchAll,
+			path: `/services/v2/service_types/${context.propsValue.service_type}/teams`,
+			...listOptions,
 		});
 	},
 });
